@@ -1,0 +1,46 @@
+metadata:
+  name: hf-detr-v1-coco
+  namespace: cvat
+  annotations:
+    name: DETR coco balloons
+    type: detector
+    framework: pytorch
+    spec: |
+      [
+        { "id": 0, "name": "balloon" }
+      ]
+
+
+#apiVersion: "nuclio.io/v1beta1"
+#kind: "NuclioFunction"
+spec:
+  description: HuggingFace Detr
+  runtime: "python:3.6"
+  handler: main:handler
+  eventTimeout: 30s
+  minReplicas: 1
+  maxReplicas: 1
+  build:
+    image: cvat/hf.detr-ballon-coco
+    baseImage: huggingface/transformers-pytorch-cpu
+    commands:
+    - "apt-get update && apt-get install -y wget"
+    - "wget https://github.com/lbolanos/balloon_detr/raw/main/ballon_model.pth"
+    - "mkdir -p /tmp/tfmodel"
+    - "mv ballon_model.pth /tmp/tfmodel"
+    - "pip install requests numpy transformers timm pytorch-lightning"
+
+  triggers:
+    myHttpTrigger:
+      maxWorkers: 2
+      kind: 'http'
+      workerAvailabilityTimeoutMilliseconds: 10000
+      attributes:
+        maxRequestBodySize: 33554432 # 32MB
+
+  platform:
+    attributes:
+      restartPolicy:
+        name: always
+        maximumRetryCount: 3
+      mountMode: volume
